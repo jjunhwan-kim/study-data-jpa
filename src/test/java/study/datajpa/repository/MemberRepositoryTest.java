@@ -1,8 +1,10 @@
 package study.datajpa.repository;
 
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.dao.IncorrectResultSizeDataAccessException;
 import org.springframework.test.annotation.Rollback;
 import org.springframework.transaction.annotation.Transactional;
 import study.datajpa.dto.MemberDto;
@@ -11,6 +13,7 @@ import study.datajpa.entity.Team;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
@@ -156,5 +159,37 @@ class MemberRepositoryTest {
         for (Member member : result) {
             System.out.println("member = " + member);
         }
+    }
+
+    @Test
+    void returnType() {
+
+        Member m1 = new Member("AAA", 10);
+        Member m2 = new Member("BBB", 20);
+        memberRepository.save(m1);
+        memberRepository.save(m2);
+
+        List<Member> foundMembers = memberRepository.findListByUsername("AAA");
+        Member foundMember = memberRepository.findMemberByUsername("AAA");
+        Optional<Member> foundMemberOptional = memberRepository.findOptionalByUsername("AAA");
+
+        // 리스트로 반환 할 경우 조회된 데이터가 없으면 빈 컬렉션을 반환한다. null이 아님에 유의!
+        List<Member> result = memberRepository.findListByUsername("CCC");
+        System.out.println("result.size() = " + result.size());
+
+        // 단건 조회일 경우 조회된 데이터가 없으면 null을 반환한다.
+        Member notFoundMember = memberRepository.findMemberByUsername("CCC");
+        System.out.println("notFoundMember = " + notFoundMember);
+
+        // 데이터가 있을지 없을지 모르는 경우 옵셔널을 사용하는 것을 권장
+        Optional<Member> notFoundMemberOptional = memberRepository.findOptionalByUsername("CCC");
+        System.out.println("notFoundMemberOptional = " + notFoundMemberOptional);
+
+        memberRepository.save(new Member("CCC", 20));
+        memberRepository.save(new Member("CCC", 30));
+
+        // 옵셔널 단건 조회시 조회된 데이터가 2개 이상이면 IncorrectResultSizeDataAccessException 예외가 발생
+        // NonUniqueResultException 예외가 발생하면 스프링 데이터 JPA가 스프링 프레임워크 예외인 IncorrectResultSizeDataAccessException로 변환
+        Assertions.assertThrows(IncorrectResultSizeDataAccessException.class, () -> memberRepository.findOptionalByUsername("CCC"));
     }
 }
