@@ -18,7 +18,8 @@ import static org.junit.jupiter.api.Assertions.*;
 @Rollback(false)
 class MemberJpaRepositoryTest {
 
-    @Autowired MemberJpaRepository memberJpaRepository;
+    @Autowired
+    MemberJpaRepository memberJpaRepository;
 
     @Test
     void testMember() {
@@ -91,7 +92,7 @@ class MemberJpaRepositoryTest {
     }
 
     @Test
-    public void pageing() {
+    void paging() {
         // given
         memberJpaRepository.save(new Member("member1", 10));
         memberJpaRepository.save(new Member("member2", 10));

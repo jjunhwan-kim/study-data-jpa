@@ -5,6 +5,10 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.dao.IncorrectResultSizeDataAccessException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Slice;
+import org.springframework.data.domain.Sort;
 import org.springframework.test.annotation.Rollback;
 import org.springframework.transaction.annotation.Transactional;
 import study.datajpa.dto.MemberDto;
@@ -191,5 +195,47 @@ class MemberRepositoryTest {
         // 옵셔널 단건 조회시 조회된 데이터가 2개 이상이면 IncorrectResultSizeDataAccessException 예외가 발생
         // NonUniqueResultException 예외가 발생하면 스프링 데이터 JPA가 스프링 프레임워크 예외인 IncorrectResultSizeDataAccessException로 변환
         Assertions.assertThrows(IncorrectResultSizeDataAccessException.class, () -> memberRepository.findOptionalByUsername("CCC"));
+    }
+
+    @Test
+    void paging() {
+        // given
+        memberRepository.save(new Member("member1", 10));
+        memberRepository.save(new Member("member2", 10));
+        memberRepository.save(new Member("member3", 10));
+        memberRepository.save(new Member("member4", 10));
+        memberRepository.save(new Member("member5", 10));
+
+        int age = 10;
+        PageRequest pageRequest = PageRequest.of(0, 3, Sort.by(Sort.Direction.DESC, "username"));
+
+        // when
+        List<Member> list = memberRepository.findByAge(age, pageRequest);
+        Page<Member> page = memberRepository.findPageByAge(age, pageRequest);
+        Slice<Member> slice = memberRepository.findSliceByAge(age, pageRequest);
+
+        // API에서 리턴할 때 DTO로 변환해서 리턴해야 함!
+        Page<MemberDto> pageMemberDto = page.map(member -> new MemberDto(member.getId(), member.getUsername(), null));
+
+        // then
+
+        // List - 단순히 limit, offset 적용된 쿼리
+        assertThat(list.size()).isEqualTo(3);
+
+        // Page - limit, offset 쿼리와 count 쿼리
+        List<Member> content = page.getContent();
+        assertThat(content.size()).isEqualTo(3);
+        assertThat(page.getTotalElements()).isEqualTo(5);
+        assertThat(page.getNumber()).isEqualTo(0); // 페이지 번호
+        assertThat(page.getTotalPages()).isEqualTo(2);
+        assertThat(page.isFirst()).isTrue();
+        assertThat(page.hasNext()).isTrue();
+
+        // Slice - limit 가 size + 1
+        List<Member> sliceContent = slice.getContent();
+        assertThat(sliceContent.size()).isEqualTo(3);
+        assertThat(slice.getNumber()).isEqualTo(0); // 페이지 번호
+        assertThat(slice.isFirst()).isTrue();
+        assertThat(slice.hasNext()).isTrue();
     }
 }
